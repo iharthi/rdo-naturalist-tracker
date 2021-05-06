@@ -13,12 +13,13 @@ div.item {
 div.item > div.title {
   white-space: normal;
   flex-grow: 1;
+  color: #747474;
 }
 
 div.item > div.count {
   font-size: 32px;
   margin-left: 5px;
-  min-width: 40px;
+  min-width: 44px;
   text-align: center;
 }
 
@@ -38,7 +39,7 @@ div.category > button:disabled > img {
 
 div.category h1 {
   line-height: 70px;
-  font-size: 24px;
+  font-size: 20px;
 }
 
 div.category > div {
@@ -58,8 +59,8 @@ img.minus-icon {
   width: 60px;
 }
 
-div.non-zero {
-  font-weight: bold;
+div.non-zero > div.title {
+  color: #e1e1e1;
 }
 
 input.category-selected-input {

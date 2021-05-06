@@ -54,25 +54,24 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
   categoryKey,
 }) => {
   const [totals, setTotals] = useState<Totals>(getTotalsFromLocalStorage());
+  const [numberCollected, setNumberCollected] = useState<number>(0);
 
-  const checkCanDecreaseAll = useCallback(
+  const countCollected = useCallback(
     (currentTotals: Totals) => {
-      let canNowDecreaseAll = true;
-      items.forEach((i) => {
-        if (!currentTotals[i.key] || currentTotals[i.key] < 1) {
-          canNowDecreaseAll = false;
-        }
-      });
-
-      setCanDecreaseAll(canNowDecreaseAll);
+      setNumberCollected(
+        items
+          .map((i): number =>
+            !currentTotals[i.key] || currentTotals[i.key] < 1 ? 0 : 1
+          )
+          .reduce((a, b) => a + b, 0)
+      );
     },
     [items]
   );
 
-  const [canDecreaseAll, setCanDecreaseAll] = useState<boolean>(false);
   useEffect(() => {
-    checkCanDecreaseAll(totals);
-  }, [checkCanDecreaseAll, totals]);
+    countCollected(totals);
+  }, [countCollected, totals]);
 
   const onChange = useCallback(
     (key: string, change: number) => {
@@ -84,10 +83,10 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
       const newTotals = { ...totals, [key]: newValue };
 
       window.localStorage.setItem("totals", JSON.stringify(newTotals));
-      checkCanDecreaseAll(newTotals);
+      countCollected(newTotals);
       setTotals(newTotals);
     },
-    [totals, checkCanDecreaseAll]
+    [totals, countCollected]
   );
 
   const decreaseAll = useCallback(() => {
@@ -96,17 +95,23 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
       newTotals[i.key] = (totals[i.key] || 0) - 1;
     });
     window.localStorage.setItem("totals", JSON.stringify(newTotals));
-    checkCanDecreaseAll(newTotals);
+    countCollected(newTotals);
     setTotals(newTotals);
-  }, [totals, items, checkCanDecreaseAll]);
+  }, [totals, items, countCollected]);
 
   return (
     <div className="category">
-      <button disabled={!canDecreaseAll} onClick={decreaseAll} type="button">
+      <button
+        disabled={numberCollected < items.length}
+        onClick={decreaseAll}
+        type="button"
+      >
         <img src={image} alt={title} />
       </button>
       <label htmlFor={`category-${categoryKey}`}>
-        <h1>{title}</h1>
+        <h1>
+          {title} ({numberCollected}/{items.length})
+        </h1>
       </label>
       <input
         className="category-selected-input"
