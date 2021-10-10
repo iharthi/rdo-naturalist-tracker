@@ -14,16 +14,18 @@ interface ItemListProps {
   categoryKey: string;
 }
 
-type Totals = Record<string, number>;
+type Totals = Record<string, {count: number; stamped: boolean}>;
 
 const isTotals = (value: any): value is Totals =>
   value !== null &&
   typeof value === "object" &&
   Object.keys(value).reduce(
-    (previous: boolean, current: string) =>
+    (previous: boolean, current: any) =>
       previous &&
       typeof current === "string" &&
-      typeof value[current] === "number",
+      typeof value[current] === "object" &&
+      typeof value[current].count === "number" &&
+      typeof value[current].stamped === "boolean",
     true
   );
 
@@ -54,16 +56,16 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
   categoryKey,
 }) => {
   const [totals, setTotals] = useState<Totals>(getTotalsFromLocalStorage());
-  const [numberCollected, setNumberCollected] = useState<number>(0);
+  const [numberStamped, setNumberStamped] = useState<number>(0);
 
   const countCollected = useCallback(
     (currentTotals: Totals) => {
-      setNumberCollected(
+      setNumberStamped(
         items
-          .map((i): number =>
-            !currentTotals[i.key] || currentTotals[i.key] < 1 ? 0 : 1
+          .map((i): boolean =>
+            !!currentTotals[i.key]?.stamped
           )
-          .reduce((a, b) => a + b, 0)
+          .reduce((a, b) => a + (b ? 1 : 0), 0)
       );
     },
     [items]
@@ -75,12 +77,12 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
 
   const onChange = useCallback(
     (key: string, change: number) => {
-      const currentValue = totals[key] || 0;
+      const currentValue = totals[key]?.count || 0;
       let newValue = currentValue + change;
       if (newValue < 0) {
         newValue = 0;
       }
-      const newTotals = { ...totals, [key]: newValue };
+      const newTotals = { ...totals, [key]: {count: newValue, stamped: totals[key]?.stamped || false} };
 
       window.localStorage.setItem("totals", JSON.stringify(newTotals));
       countCollected(newTotals);
@@ -89,10 +91,26 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
     [totals, countCollected]
   );
 
-  const decreaseAll = useCallback(() => {
+  const onStampToggle = useCallback(
+    (key: string) => {
+      const currentValue = totals[key]?.count || 0;
+      let newValue = currentValue + (totals[key]?.stamped ? 1 : -1);
+      if (newValue < 0) {
+        newValue = 0;
+      }
+      const newTotals = { ...totals, [key]: {count: newValue, stamped: !totals[key]?.stamped} };
+
+      window.localStorage.setItem("totals", JSON.stringify(newTotals));
+      countCollected(newTotals);
+      setTotals(newTotals);
+    },
+    [totals, countCollected]
+  );
+
+  const unStampAll = useCallback(() => {
     const newTotals: Totals = {};
     items.forEach((i) => {
-      newTotals[i.key] = (totals[i.key] || 0) - 1;
+      newTotals[i.key] = {...totals[i.key], stamped: false};
     });
     window.localStorage.setItem("totals", JSON.stringify(newTotals));
     countCollected(newTotals);
@@ -102,15 +120,15 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
   return (
     <div className="category">
       <button
-        disabled={numberCollected < items.length}
-        onClick={decreaseAll}
+        disabled={numberStamped < items.length}
+        onClick={unStampAll}
         type="button"
       >
         <img src={image} alt={title} />
       </button>
       <label htmlFor={`category-${categoryKey}`}>
         <h1>
-          {title} ({numberCollected}/{items.length})
+          {title} ({numberStamped}/{items.length})
         </h1>
       </label>
       <input
@@ -123,12 +141,16 @@ export const ItemList: FunctionComponent<ItemListProps> = ({
           <Item
             key={i.key}
             title={i.title}
-            count={totals[i.key] || 0}
+            count={totals[i.key]?.count || 0}
+            stamped={totals[i.key]?.stamped || false}
             onIncrease={() => {
               onChange(i.key, 1);
             }}
             onDecrease={() => {
               onChange(i.key, -1);
+            }}
+            onStampToggle={() => {
+              onStampToggle(i.key);
             }}
           />
         ))}

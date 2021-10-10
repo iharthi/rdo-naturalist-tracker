@@ -54,7 +54,8 @@ button {
 }
 
 img.plus-icon,
-img.minus-icon {
+img.minus-icon,
+img.stamp-icon {
   height: 60px;
   width: 60px;
 }
